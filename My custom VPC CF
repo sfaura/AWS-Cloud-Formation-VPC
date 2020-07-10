@@ -1,0 +1,52 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: MyFirstCFVPCDeploy
+
+Resources:
+  1stVPCDeploy:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 172.16.0.0/16
+      EnableDnsHostnames: false
+      Tags:
+      - Key: Name
+        Value: Prueba VPC CF Deploy
+
+  IGPrueba:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: IGPrueba
+
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref 1stVPCDeploy
+      InternetGatewayId: !Ref IGPrueba
+
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref 1stVPCDeploy
+      CidrBlock: 172.16.0.0/24
+      AvailabilityZone: !Select 
+        - '0'
+        - !GetAZs ''
+      Tags:
+        - Key: Name
+          Value: Public Subnet 1
+
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: eu-west-1b
+      VpcId: vpc-034858051f444fd4e
+      CidrBlock: 172.16.1.0/24
+      Tags:
+        - Key: Name
+          Value: PrivateSubnet1      
+
+Outputs:
+  VPCprueba:
+    Description: VPC
+    Value: !Ref 1stVPCDeploy       
