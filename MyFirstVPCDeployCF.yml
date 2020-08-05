@@ -1,0 +1,120 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: vpc-singleAZ-pub-priv-subn
+
+Parameters: 
+  RangoCidr:
+    Description: "Selecciona el rango cidr"
+    Type: String
+    Default: 10.0.0.0/16
+    ConstraintDescription: Selecciona el rango cidr
+    AllowedValues: 
+    - 10.0.0.0/16
+    - 10.1.0.0/16
+    - 10.2.0.0/16
+   
+Resources: 
+  
+  MyVpcCF:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref RangoCidr
+      EnableDnsSupport: true
+      Tags:
+      - Key: Name
+        Value: !Join ['', [!Ref "AWS::StackName", "-VPC" ]]
+  IGW:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: IG_SingleAZ_VPC
+
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref MyVpcCF
+      InternetGatewayId: !Ref IGW
+
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Select
+        - '0'
+        - !GetAZs ''
+      VpcId: !Ref MyVpcCF
+      CidrBlock: 10.0.1.0/24
+      Tags:
+        - Key: Name
+          Value: Public Subnet 1
+
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Select
+        - '0'
+        - !GetAZs ''
+      VpcId: !Ref MyVpcCF
+      CidrBlock: 10.0.2.0/24
+      Tags:
+        - Key: Name
+          Value: Private Subnet 1
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref MyVpcCF
+      Tags:
+        - Key: Name
+          Value: Public Route Table
+
+  PublicRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref IGW
+
+  PublicSubnetRouteTableAssociation1:
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnet1   
+
+  FrontSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: FrontSG
+      GroupDescription: Allows HTTP access and SSH access from admin IP
+      VpcId: !Ref MyVpcCF
+          
+  FrontSGIngress1:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:   
+        GroupId: !Ref FrontSG
+        CidrIp:  0.0.0.0/0
+        IpProtocol: tcp
+        FromPort: 80
+        ToPort: 80     
+
+  FrontSGIngress2:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:    
+        GroupId: !Ref FrontSG
+        CidrIp:  79.170.12.214/32
+        IpProtocol: tcp
+        FromPort: 22
+        ToPort: 22    
+
+Outputs:
+
+  WebServerSecurityGroup:
+    Description: The security group ID to use for public web servers
+    Value:
+      Fn::GetAtt:
+      - FrontSG
+      - GroupId
+    Export:
+      Name:
+        Fn::Sub: "${AWS::StackName}-SecurityGroupID"
+      
+    
