@@ -1,0 +1,62 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: ---
+
+Parameters: 
+  RangoCidr:
+    Description: "Selecciona el rango cidr"
+    Type: String
+    Default: 10.0.0.0/16
+    ConstraintDescription: Selecciona el rango cidr
+    AllowedValues: 
+    - 10.0.0.0/16
+    - 10.1.0.0/16
+    - 10.2.0.0/16
+  
+  IdImagen:
+    Type: String
+    Description: Imagen para la instancia (Amazon Linux 2 AMI ami-07d9160fa81ccffb5, Ubuntu Server 18.04 ami-089cc16f7f08c4457)
+    AllowedValues: 
+     - ami-07d9160fa81ccffb5
+     - ami-089cc16f7f08c4457
+    Default: ami-07d9160fa81ccffb5
+
+  TipoInstancia:
+    Type: String
+    Description: Tipo de instancia
+    AllowedValues:
+      - t2.micro
+      - t2.small
+    Default: t2.micro
+
+  ParClave:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: Par de claves para acceder a la instancia
+    AllowedPattern: .+
+    ConstraintDescription: Es obligatorio seleccionar un par de claves
+
+Resources: 
+
+  MyVPC:
+    Type: "AWS::CloudFormation::Stack"
+    Properties:
+      TemplateURL: https://cf-templates-2qjqx4jy95ve-eu-west-1.s3-eu-west-1.amazonaws.com/substacks/MyFirstVPCDeployCF.yml
+      Parameters: 
+        RangoCidr: !Ref RangoCidr
+
+  myEC2Instance:
+    Type: "AWS::CloudFormation::Stack"
+    Properties:
+      TemplateURL: https://cf-templates-2qjqx4jy95ve-eu-west-1.s3-eu-west-1.amazonaws.com/substacks/Deploy+instances.yml
+      Parameters: 
+        - IdImagen: !Ref IdImagen
+        - TipoInstancia: !Ref TipoInstancia
+        - ParClave: !Ref ParClave 
+        - GrupoSeguridad: !GetAtt MyVPC.Outputs.FrontSG
+    
+Outputs:
+  SalidaSG:
+    Description: Coje la salida FrontSG del substack MyVPC
+    Value:
+      Fn::GetAtt:
+        - Outputs.GrupoDeSeguridad.GroupId
+        - FrontSG
